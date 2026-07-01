@@ -14,30 +14,30 @@
 ## 使用示例：
 
 ```
-1   帮我做一个技术动态与知识沉淀的周报推送：
-2   - 数据源：GitHub Trending（Python 区）+ Hacker News（Show HN）+ InfoQ 架构专栏
-3   - 筛选：用 LLM 识别「零售相关」标签（推荐/库存/私域/小程序/数字门店）
-4   - 摘要：每条 3 行中文摘要 + 1 个应用建议 + 1 个相关项目 Star 数
-5   - 推送：每周一 9:00 推送到「零售技术雷达」企微群，@相关订阅人
-6   - 存储：原始数据进 SQLite，结构化周报写腾讯文档（按月归档）
-7   - 样式：彩色卡片（红=新出现/橙=持续关注/绿=已落地），支持点击展开原文
-8   - 部署：GitHub Actions 定时触发 + WorkBuddy 自动化兜底，结果双通道通知
+1   帮我做一个 AI 行业日报的自动推送系统：
+2   - 数据源：arXiv（cs.AI / cs.CL）+ Hacker News（AI tag）+ OpenAI / Anthropic / DeepMind 官方博客 + 36 氪 AI 频道
+3   - 筛选：LLM 分类（模型发布 / 论文突破 / 融资事件 / 产品落地 / 政策监管 5 类）+ 重要性打分（1~5 星）
+4   - 摘要：每条 1 段中文摘要 + 1 个「对我们的启示」+ 1 个原文链接 + 1 个相关项目 Star 数
+5   - 推送：每日早 8:00 推送到「AI 产品组」企微群，只推 ≥3 星动态，附日报卡片图
+6   - 存储：原始数据进 SQLite 全文索引，结构化日报写腾讯文档（永久链接，便于回看）
+7   - 样式：暗色主题卡片（紫=模型 / 蓝=论文 / 绿=产品 / 橙=融资 / 红=政策），支持筛选与收藏
+8   - 部署：GitHub Actions 每天 7:30 跑采集 → WorkBuddy 自动化兜底 → 失败时人工介入群
 ```
 
 **示例产物**：
-- [`tech-pulse.html`](./tech-pulse.html) —— 技术动态雷达大屏（含 GitHub Trending + Hacker News 真实数据 mock）
-- [`decision-matrix.html`](./decision-matrix.html) —— 选型对比矩阵（Redis vs DragonflyDB vs KeyDB 5 维雷达）
-- [`onboarding.html`](./onboarding.html) —— 代码库扫描生成的知识资产展示（含架构图 + ADR + Onboarding）
+- [`tech-pulse.html`](./tech-pulse.html) —— AI 日报雷达大屏（含 5 类动态 + 5 星打分 + 18 条今日精选）
+- [`decision-matrix.html`](./decision-matrix.html) —— 选型对比矩阵（GPT-4o vs Claude 3.5 vs Gemini 1.5 Pro 5 维雷达）
+- [`onboarding.html`](./onboarding.html) —— 团队知识资产展示（含架构图 + ADR + 新人 30 分钟 Onboarding）
 
 **对照清单**：
 
 | 需求行 | 实现位置 | 关键代码 |
 |---|---|---|
-| 1 任务 | 顶部 `header` | 「零售技术雷达」副标题 + 脉冲灯 |
-| 2 数据源 | `mockTrending()` + `mockHackerNews()` | 20 条 GitHub + 10 条 HN 真实标签 mock |
-| 3 筛选 | `filterRetail()` LLM 标签识别 | 关键词 + 向量双通道打分 |
-| 4 摘要 | `generateDigest()` | 3 行摘要 + 应用建议 + Star 数 |
-| 5 推送 | `pushToWeCom()` | webhook + @订阅人占位符 |
-| 6 存储 | `SQLite + TDoc` | 月归档 + 月度复盘 |
-| 7 样式 | CSS `tag-red/orange/green` | 与截图完全一致 |
-| 8 部署 | 底部 `deploy-row` | GitHub Actions YAML + WorkBuddy 自动化 |
+| 1 任务 | 顶部 `header` | 「AI 行业日报」副标题 + 脉冲灯 + 早 8 点倒计时 |
+| 2 数据源 | `mockArxiv()` + `mockHackerNews()` + `mockOfficialBlog()` + `mock36Kr()` | 4 源 mock，18 条覆盖 5 类 |
+| 3 筛选 | `classifyByAI()` + `scoreImportance()` | 5 分类标签 + 1~5 星打分 |
+| 4 摘要 | `generateDigest()` | 中文摘要 + 启示 + 链接 + Star 数 4 字段 |
+| 5 推送 | `pushToWeCom()` | webhook + 早 8:00 cron + 3 星过滤 |
+| 6 存储 | `SQLite + TDoc` | 全文索引 + 永久链接 |
+| 7 样式 | CSS `tag-purple/blue/green/orange/red` | 5 色卡片 + 筛选条 |
+| 8 部署 | 底部 `deploy-row` | GitHub Actions YAML + WorkBuddy 自动化兜底 |

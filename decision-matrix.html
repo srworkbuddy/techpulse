@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>选型对比矩阵 · Decision Matrix</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+    color: #e6e9f0; min-height: 100vh; padding: 16px 24px 24px;
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; margin-bottom: 16px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header h1 .accent { color: #00d4ff; }
+  .header .sub { font-size: 12px; color: #8b92a8; margin-top: 4px; }
+  .badge { padding: 4px 10px; background: rgba(0,212,255,0.15); border: 1px solid rgba(0,212,255,0.3); border-radius: 6px; font-size: 12px; color: #00d4ff; }
+
+  .layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .panel { padding: 16px 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+  .panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #00d4ff; }
+  .panel .hint { font-size: 11px; color: #8b92a8; margin-bottom: 8px; }
+
+  .candidates { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .cand { padding: 8px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .cand:hover { background: rgba(0,212,255,0.08); }
+  .cand.active { background: rgba(0,212,255,0.15); border-color: #00d4ff; }
+  .cand .name { font-size: 13px; font-weight: 600; }
+  .cand .meta { font-size: 10px; color: #8b92a8; margin-top: 2px; }
+  .cand .check { display: inline-block; margin-right: 4px; }
+
+  #radar { min-height: 360px; }
+
+  .weights { display: flex; flex-direction: column; gap: 10px; }
+  .weight-row { display: grid; grid-template-columns: 100px 1fr 50px; align-items: center; gap: 12px; font-size: 12px; }
+  .weight-row .name { color: #c4c9d6; }
+  .weight-row input[type=range] { width: 100%; accent-color: #00d4ff; }
+  .weight-row .val { text-align: right; color: #00d4ff; font-weight: 600; }
+
+  .scores { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .score { padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .score.recommend { border-color: #00ff88; background: rgba(0,255,136,0.05); }
+  .score .name { font-size: 13px; font-weight: 600; }
+  .score .verdict { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .score .verdict.recommend { background: rgba(0,255,136,0.2); color: #00ff88; }
+  .score .verdict.consider { background: rgba(255,170,59,0.2); color: #ffaa3b; }
+  .score .verdict.reject { background: rgba(255,94,94,0.2); color: #ff5e5e; }
+  .score .bar { width: 140px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+  .score .bar > div { height: 100%; background: linear-gradient(90deg, #00d4ff, #00ff88); border-radius: 3px; }
+
+  .matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .matrix th, .matrix td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .matrix th { color: #00d4ff; font-weight: 600; background: rgba(0,212,255,0.05); }
+  .matrix tr:hover td { background: rgba(255,255,255,0.02); }
+  .matrix td.dim { color: #8b92a8; font-size: 11px; }
+  .matrix td .bar { display: inline-block; width: 60px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-left: 8px; vertical-align: middle; }
+  .matrix td .bar > div { height: 100%; background: #00d4ff; border-radius: 2px; }
+
+  .poc { padding: 14px 18px; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 8px; margin-top: 12px; }
+  .poc h3 { font-size: 13px; color: #00ff88; margin-bottom: 8px; }
+  .poc ol { margin-left: 20px; font-size: 12px; color: #c4c9d6; line-height: 1.8; }
+  .poc .meta { display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: #8b92a8; }
+  .poc .meta span b { color: #00d4ff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>选型对比矩阵 <span class="accent">Decision Matrix</span></h1>
+    <div class="sub">多方案 5 维评分 + 加权雷达 + POC 路径 · WorkBuddy 智能选型辅助</div>
+  </div>
+  <div class="badge">3 候选方案</div>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2>5 维雷达对比</h2>
+    <div class="hint">滑动下方权重滑块，重新计算综合得分</div>
+    <div class="candidates" id="cands">
+      <div class="cand active" data-c="redis"><span class="check">●</span><span class="name">Redis 8.0</span><div class="meta">社区主流 · 68.2k★</div></div>
+      <div class="cand active" data-c="dragonfly"><span class="check">●</span><span class="name">DragonflyDB</span><div class="meta">高性能 · 26.4k★</div></div>
+      <div class="cand active" data-c="keydb"><span class="check">●</span><span class="name">KeyDB</span><div class="meta">Redis 分支 · 12.1k★</div></div>
+    </div>
+    <div id="radar"></div>
+  </div>
+
+  <div class="panel">
+    <h2>维度权重 & 综合得分</h2>
+    <div class="hint">总分 = Σ(维度得分 × 权重)</div>
+    <div class="weights" id="weights">
+      <div class="weight-row"><span class="name">功能性</span><input type="range" min="0" max="100" value="25" data-d="feature"><span class="val">25%</span></div>
+      <div class="weight-row"><span class="name">性能</span><input type="range" min="0" max="100" value="30" data-d="perf"><span class="val">30%</span></div>
+      <div class="weight-row"><span class="name">社区活跃</span><input type="range" min="0" max="100" value="15" data-d="community"><span class="val">15%</span></div>
+      <div class="weight-row"><span class="name">License 友好</span><input type="range" min="0" max="100" value="10" data-d="license"><span class="val">10%</span></div>
+      <div class="weight-row"><span class="name">兼容性</span><input type="range" min="0" max="100" value="20" data-d="compat"><span class="val">20%</span></div>
+    </div>
+    <div class="scores" id="scores"></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:16px;">
+  <h2>详细评分表（5 维 × 3 方案）</h2>
+  <table class="matrix" id="matrix">
+    <thead>
+      <tr><th>维度</th><th>Redis 8.0</th><th>DragonflyDB</th><th>KeyDB</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="poc">
+    <h3>✅ POC 建议（推荐 DragonflyDB）</h3>
+    <ol>
+      <li><b>场景选定</b>：购物车高频读写（QPS 8 万） + 大促秒杀</li>
+      <li><b>部署规模</b>：3 节点集群（生产影子流量，1 周观察期）</li>
+      <li><b>兼容性验证</b>：用 RESP2 协议接入，验证现有客户端无侵入</li>
+      <li><b>性能基线</b>：对比 Redis，P95 延迟降低 ≥30% 视为达标</li>
+      <li><b>风险兜底</b>：保留 Redis 主从作为回滚方案，影子流量切换</li>
+    </ol>
+    <div class="meta">
+      <span>预计工期: <b>2 周</b></span>
+      <span>涉及团队: <b>基础架构 + 电商中台</b></span>
+      <span>风险等级: <b>中</b></span>
+      <span>成本节省: <b>~40% 实例数</b></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== 维度数据（0-100） ======
+const DATA = {
+  redis:     { name: 'Redis 8.0',     color: '#ff5e5e', scores: { feature: 95, perf: 75, community: 100, license: 90, compat: 100 } },
+  dragonfly: { name: 'DragonflyDB',   color: '#00d4ff', scores: { feature: 85, perf: 95, community: 75, license: 90, compat: 92 } },
+  keydb:     { name: 'KeyDB',         color: '#ffaa3b', scores: { feature: 80, perf: 88, community: 60, license: 80, compat: 90 } }
+};
+
+const DIM_LABEL = {
+  feature: '功能性', perf: '性能', community: '社区活跃', license: 'License 友好', compat: '兼容性'
+};
+
+const ALL_CANDS = ['redis', 'dragonfly', 'keydb'];
+let activeCands = new Set(ALL_CANDS);
+let weights = { feature: 25, perf: 30, community: 15, license: 10, compat: 20 };
+
+// ====== 雷达 ======
+const radarChart = echarts.init(document.getElementById('radar'));
+function renderRadar() {
+  const indicators = Object.keys(DIM_LABEL).map(k => ({ name: DIM_LABEL[k], max: 100 }));
+  const seriesData = ALL_CANDS.filter(c => activeCands.has(c)).map(c => ({
+    name: DATA[c].name, value: Object.keys(DIM_LABEL).map(k => DATA[c].scores[k]),
+    itemStyle: { color: DATA[c].color },
+    lineStyle: { color: DATA[c].color, width: 2 },
+    areaStyle: { color: DATA[c].color + '33' }
+  }));
+  radarChart.setOption({
+    tooltip: { trigger: 'item' },
+    legend: { textStyle: { color: '#c4c9d6' }, bottom: 0 },
+    radar: {
+      indicator: indicators,
+      splitArea: { areaStyle: { color: ['rgba(0,212,255,0.02)', 'rgba(0,212,255,0.05)'] } },
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      name: { textStyle: { color: '#c4c9d6', fontSize: 12 } }
+    },
+    series: [{ type: 'radar', symbol: 'circle', symbolSize: 6, data: seriesData }]
+  });
+}
+renderRadar();
+
+// ====== 综合得分 ======
+function calcScore(c) {
+  return Math.round(
+    DATA[c].scores.feature * weights.feature / 100 +
+    DATA[c].scores.perf * weights.perf / 100 +
+    DATA[c].scores.community * weights.community / 100 +
+    DATA[c].scores.license * weights.license / 100 +
+    DATA[c].scores.compat * weights.compat / 100
+  );
+}
+
+function renderScores() {
+  const list = ALL_CANDS.filter(c => activeCands.has(c)).map(c => ({ c, score: calcScore(c) }));
+  list.sort((a, b) => b.score - a.score);
+  const max = Math.max(...list.map(l => l.score));
+  const el = document.getElementById('scores');
+  el.innerHTML = list.map((l, i) => {
+    const verdict = i === 0 ? 'recommend' : (l.score >= max * 0.9 ? 'consider' : 'reject');
+    const verdictText = i === 0 ? '✅ 推荐' : (l.score >= max * 0.9 ? '⚠️ 备选' : '❌ 不建议');
+    return `
+      <div class="score ${verdict === 'recommend' ? 'recommend' : ''}">
+        <span class="name">${DATA[l.c].name}</span>
+        <span class="bar"><div style="width:${l.score}%"></div></span>
+        <span style="font-weight:700;font-size:18px;color:${DATA[l.c].color}">${l.score}</span>
+        <span class="verdict ${verdict}">${verdictText}</span>
+      </div>
+    `;
+  }).join('');
+}
+renderScores();
+
+// ====== 详细矩阵 ======
+function renderMatrix() {
+  const tbody = document.querySelector('#matrix tbody');
+  tbody.innerHTML = Object.keys(DIM_LABEL).map(k => {
+    return `<tr>
+      <td class="dim">${DIM_LABEL[k]}</td>
+      ${ALL_CANDS.map(c => {
+        const v = DATA[c].scores[k];
+        return `<td>${v}<span class="bar"><div style="width:${v}%"></div></span></td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+}
+renderMatrix();
+
+// ====== 交互：权重 ======
+document.getElementById('weights').addEventListener('input', e => {
+  const t = e.target;
+  if (t.tagName !== 'INPUT') return;
+  const d = t.dataset.d;
+  weights[d] = +t.value;
+  t.nextElementSibling.textContent = t.value + '%';
+  renderScores();
+});
+
+// ====== 交互：候选切换 ======
+document.getElementById('cands').addEventListener('click', e => {
+  const c = e.target.closest('.cand');
+  if (!c) return;
+  const key = c.dataset.c;
+  if (activeCands.has(key) && activeCands.size > 1) {
+    activeCands.delete(key); c.classList.remove('active');
+  } else {
+    activeCands.add(key); c.classList.add('active');
+  }
+  renderRadar(); renderScores();
+});
+
+window.addEventListener('resize', () => radarChart.resize());
+</script>
+
+</body>
+</html>

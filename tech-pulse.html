@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>零售技术雷达 · Tech Pulse</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+    color: #e6e9f0; min-height: 100vh; padding: 16px 24px 24px;
+  }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; margin-bottom: 16px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; backdrop-filter: blur(8px);
+  }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header h1 .accent { color: #00d4ff; }
+  .header .sub { font-size: 12px; color: #8b92a8; margin-top: 4px; }
+  .pulse { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .pulse-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 12px #00ff88; animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .kpi { padding: 16px 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+  .kpi .label { font-size: 11px; color: #8b92a8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+  .kpi .delta { font-size: 11px; margin-top: 4px; }
+  .kpi .delta.up { color: #ff5e5e; }
+  .kpi .delta.down { color: #00ff88; }
+
+  .layout { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .panel { padding: 16px 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+  .panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #00d4ff; }
+  .panel .hint { font-size: 11px; color: #8b92a8; margin-bottom: 8px; }
+
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+  .flow .node { padding: 6px 12px; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 6px; }
+  .flow .arrow { color: #8b92a8; }
+
+  #mermaid { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 12px; min-height: 220px; }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { padding: 4px 10px; border-radius: 14px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; user-select: none; }
+  .chip:hover { background: rgba(0,212,255,0.1); }
+  .chip.active { background: rgba(0,212,255,0.2); border-color: #00d4ff; color: #00d4ff; }
+
+  .feed { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+  .card { padding: 12px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-left: 3px solid #8b92a8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .card:hover { background: rgba(255,255,255,0.06); transform: translateX(2px); }
+  .card.new { border-left-color: #ff5e5e; }
+  .card.watching { border-left-color: #ffaa3b; }
+  .card.adopted { border-left-color: #00ff88; }
+  .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .card .title { font-size: 13px; font-weight: 600; }
+  .card .stars { font-size: 11px; color: #ffaa3b; }
+  .card .source { font-size: 10px; color: #8b92a8; padding: 1px 6px; background: rgba(255,255,255,0.05); border-radius: 3px; }
+  .card .summary { font-size: 12px; color: #c4c9d6; margin-top: 6px; line-height: 1.5; }
+  .card .advice { font-size: 11px; color: #00d4ff; margin-top: 6px; padding: 4px 8px; background: rgba(0,212,255,0.08); border-radius: 4px; }
+  .card .tags { display: flex; gap: 4px; margin-top: 6px; }
+  .card .tag { font-size: 10px; padding: 1px 6px; background: rgba(138,146,168,0.2); border-radius: 3px; color: #8b92a8; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #radar-chart { min-height: 260px; }
+  #trend-chart { min-height: 260px; }
+
+  .deploy-row { padding: 12px 20px; background: rgba(0,212,255,0.05); border: 1px dashed rgba(0,212,255,0.3); border-radius: 10px; font-size: 12px; color: #c4c9d6; line-height: 1.7; }
+  .deploy-row code { background: rgba(0,0,0,0.3); padding: 1px 6px; border-radius: 3px; color: #00d4ff; }
+  .deploy-row .env { color: #ffaa3b; }
+
+  /* 滚动条 */
+  .feed::-webkit-scrollbar { width: 6px; }
+  .feed::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>零售技术雷达 <span class="accent">Tech Pulse</span></h1>
+    <div class="sub">WorkBuddy 知识自动化中枢 · 每日 09:00 自动采集 → LLM 筛选 → 企微推送</div>
+  </div>
+  <div class="pulse">
+    <div class="pulse-dot"></div>
+    <span>运行中</span>
+    <span style="color:#8b92a8">|</span>
+    <span>下次采集: <b id="countdown">--:--:--</b></span>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="label">今日采集</div>
+    <div class="value">42</div>
+    <div class="delta up">+12 较昨日</div>
+  </div>
+  <div class="kpi">
+    <div class="label">零售相关</div>
+    <div class="value" style="color:#00d4ff">18</div>
+    <div class="delta up">+5 较昨日</div>
+  </div>
+  <div class="kpi">
+    <div class="label">已订阅</div>
+    <div class="value">23</div>
+    <div class="delta">技术同学</div>
+  </div>
+  <div class="kpi">
+    <div class="label">推送成功率</div>
+    <div class="value" style="color:#00ff88">99.6%</div>
+    <div class="delta down">↑ 0.2% 较上周</div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <h2>数据流（采集 → 筛选 → 推送）</h2>
+    <div class="hint">Mermaid 端到端流：5 数据源 → 1 LLM 筛选 → 3 推送渠道</div>
+    <div id="mermaid">
+graph LR
+  S1[GitHub Trending]:::src
+  S2[Hacker News]:::src
+  S3[InfoQ]:::src
+  S4[36氪]:::src
+  S5[掘金]:::src
+  S1 & S2 & S3 & S4 & S5 --> W[WorkBuddy 采集器]:::wb
+  W --> F{LLM 零售筛选}:::llm
+  F -->|相关 18 条| P[企微推送]:::push
+  F -->|不相关| A[归档]:::arch
+  P --> G1[零售技术雷达群]:::group
+  P --> G2[@订阅人]:::group
+  P --> G3[周报归档]:::group
+  classDef src fill:#1a3a5c,stroke:#4a8fc5,color:#fff
+  classDef wb fill:#5c2a8c,stroke:#a855f7,color:#fff
+  classDef llm fill:#8c4a1a,stroke:#ffaa3b,color:#fff
+  classDef push fill:#1a5c3a,stroke:#00ff88,color:#fff
+  classDef arch fill:#3a3a3a,stroke:#888,color:#aaa
+  classDef group fill:#0d3a5c,stroke:#00d4ff,color:#fff
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>维度分析</h2>
+    <div class="stats">
+      <div id="radar-chart"></div>
+      <div id="trend-chart"></div>
+    </div>
+  </div>
+</div>
+
+<div class="layout" style="grid-template-columns: 1fr;">
+  <div class="panel">
+    <h2>今日动态（18 条零售相关 · 可点击展开）</h2>
+    <div class="filters" id="filters">
+      <span class="chip active" data-cat="all">全部 (18)</span>
+      <span class="chip" data-cat="new">新出现 (6)</span>
+      <span class="chip" data-cat="watching">持续关注 (8)</span>
+      <span class="chip" data-cat="adopted">已落地 (4)</span>
+      <span style="margin-left:auto;display:flex;gap:6px;align-items:center;font-size:11px;color:#8b92a8;">
+        来源：
+        <span class="chip active" data-src="all">all</span>
+        <span class="chip" data-src="GH">GH</span>
+        <span class="chip" data-src="HN">HN</span>
+        <span class="chip" data-src="InfoQ">InfoQ</span>
+      </span>
+    </div>
+    <div class="feed" id="feed"></div>
+  </div>
+</div>
+
+<div class="deploy-row" style="margin-top:16px;">
+  <b>部署说明</b>（GitHub Actions + WorkBuddy 自动化双通道）<br>
+  · 触发：<code>0 9 * * 1-5</code>（工作日早 9 点）<br>
+  · 数据源：<code>github.com/trending</code> · <code>news.ycombinator.com</code> · <code>infoq.cn</code> · <code>36kr.com</code> · <code>juejin.cn</code><br>
+  · 凭据：<code class="env">WECOM_BOT_KEY=****</code> · <code class="env">GITHUB_TOKEN=****</code> · <code class="env">LLM_API_KEY=****</code>（全部走 env，不入仓库）<br>
+  · 兜底：WorkBuddy 自动化 <code>tech-pulse-daily</code>（Actions 失败时自动接管推送）
+</div>
+
+<script>
+// ====== Mermaid ======
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose', themeVariables: { background: 'transparent' } });
+
+// ====== Mock 数据：20 条 ======
+const FEED = [
+  { id: 1, status: 'new', source: 'GH', title: 'milvus-io/milvus', stars: '32.1k', summary: '云原生向量数据库，专为 AI 推荐 / RAG 场景设计。支持十亿级向量毫秒检索，零售商品相似度推荐开箱即用。', advice: '建议在「商品推荐」项目 PoC 替换 FAISS，评估 P95 召回延迟。', tags: ['推荐系统', '向量检索', 'RAG'] },
+  { id: 2, status: 'watching', source: 'GH', title: 'qdrant/qdrant', stars: '21.5k', summary: 'Rust 写的向量搜索引擎，内存效率优于 Milvus，社区提供零售案例库。', advice: '关注 v1.12 的磁盘索引压缩特性，候选方案之一。', tags: ['向量检索', 'Rust'] },
+  { id: 3, status: 'adopted', source: 'GH', title: 'redis/redis', stars: '68.2k', summary: 'Redis 8.0 正式发布，原生支持向量检索（RediSearch 升级），无需单独部署向量库。', advice: '已在「购物车推荐」灰度，P95 12ms，效果符合预期，建议扩大。', tags: ['缓存', '向量检索'] },
+  { id: 4, status: 'new', source: 'HN', title: 'Show HN: Open-source POS for retail chains', stars: '842', summary: '开源 POS 系统，5 万门店验证。Node.js + TypeScript + React Native 三端一体，支持离线优先。', advice: '对比我们自研 POS 性能 vs 维护成本，可作为外采参考。', tags: ['POS', '离线优先'] },
+  { id: 5, status: 'watching', source: 'InfoQ', title: '字节跳动：十亿级电商库存架构演进', stars: null, summary: '从分库分表到多模库存（实物/虚拟/预售），库存水位实时计算是核心。', advice: '重点参考「多模库存」模型，可应用到全渠道履约。', tags: ['库存', '电商架构'] },
+  { id: 6, status: 'new', source: '36氪', title: '微信小城程序性能优化指南 v3', stars: null, summary: '首屏渲染 < 1s 实测方案，含分包加载、Worker 线程、虚拟列表。', advice: '应用到我司小程序，首屏从 2.3s 优化到 0.9s。', tags: ['小程序', '性能'] },
+  { id: 7, status: 'watching', source: '掘金', title: '私域增长 5 大模型', stars: null, summary: '企微 + 社群 + 视频号 + 小程序 + CRM 闭环模型，会员复购率提升 35%。', advice: '运营团队可参考，规划 Q4 私域专题。', tags: ['私域', '会员'] },
+  { id: 8, status: 'adopted', source: 'GH', title: 'vercel/next.js', stars: '128k', summary: 'Next.js 15 稳定版，App Router + Server Components 全栈方案。', advice: '已在「门店管理后台」落地，开发效率 +40%。', tags: ['前端', '全栈'] },
+  { id: 9, status: 'new', source: 'GH', title: 'langchain-ai/langgraph', stars: '8.2k', summary: 'Multi-Agent 编排框架，支持循环、人在环路、持久化。', advice: '可应用到「智能导购」多 Agent 协作场景。', tags: ['Agent', 'LLM'] },
+  { id: 10, status: 'watching', source: 'InfoQ', title: '腾讯：万亿级商品知识图谱实践', stars: null, summary: '商品 - 类目 - 属性 - 关系四层图谱，搜索召回 +18%。', advice: '我们 SKU 图谱方案对标，Q3 启动升级。', tags: ['知识图谱', '搜索'] },
+  { id: 11, status: 'new', source: 'HN', title: 'Show HN: Real-time inventory with CRDTs', stars: '315', summary: '用 CRDT 实现多门店实时库存同步，无中心协调。', advice: '适合弱网门店场景，技术调研中。', tags: ['库存', 'CRDT', '分布式'] },
+  { id: 12, status: 'watching', source: '掘金', title: 'MySQL 8.4 HTAP 实战', stars: null, summary: 'MySQL HeatWave 国产化适配，OLTP+OLAP 一库搞定。', advice: '替换部分 TiDB 场景，节省 30% 成本。', tags: ['数据库', 'HTAP'] },
+  { id: 13, status: 'adopted', source: 'GH', title: 'tldraw/tldraw', stars: '37k', summary: '开源白板 SDK，支持多人协作、AI 辅助绘图。', advice: '已集成到「商品企划」工具，沟通效率 +50%。', tags: ['协作', '白板'] },
+  { id: 14, status: 'new', source: 'InfoQ', title: '零售行业大模型应用白皮书 2026', stars: null, summary: '覆盖选品 / 客服 / 营销 / 履约 4 大场景 20+ 案例。', advice: '全员必读，可作为大模型应用规划参考。', tags: ['大模型', '行业报告'] },
+  { id: 15, status: 'watching', source: '36氪', title: '盒马：数字门店新范式', stars: null, summary: 'RFID + 视觉 + 重力感应，三重校验无人结算。', advice: '门店数字化升级对标案例。', tags: ['数字门店', 'IoT'] },
+  { id: 16, status: 'adopted', source: 'GH', title: 'supabase/supabase', stars: '74k', summary: '开源 BaaS，PostgreSQL + 实时订阅 + Auth 一站式。', advice: '「会员系统」v2 已用 supabase，开发周期 -60%。', tags: ['BaaS', 'PostgreSQL'] },
+  { id: 17, status: 'new', source: 'HN', title: 'Show HN: Vector DB benchmark for retail', stars: '512', summary: '对比 5 大向量库在 100 万商品 SKU 上的检索性能。', advice: '选型决策关键数据，建议收藏。', tags: ['向量库', 'Benchmark'] },
+  { id: 18, status: 'watching', source: '掘金', title: 'TypeScript 5.7 新特性详解', stars: null, summary: '推断优化 + 装饰器稳定 + 模式匹配。', advice: '升级 TypeScript 后代码可读性显著提升。', tags: ['TypeScript'] }
+];
+
+// ====== 渲染 Feed ======
+const feedEl = document.getElementById('feed');
+function renderFeed(cat, src) {
+  const list = FEED.filter(f =>
+    (cat === 'all' || f.status === cat) &&
+    (src === 'all' || f.source === src)
+  );
+  feedEl.innerHTML = list.map(f => `
+    <div class="card ${f.status}">
+      <div class="top">
+        <div>
+          <span class="source">${f.source}</span>
+          <span class="title">${f.title}</span>
+        </div>
+        <div>${f.stars ? `<span class="stars">★ ${f.stars}</span>` : ''}</div>
+      </div>
+      <div class="summary">${f.summary}</div>
+      <div class="advice">💡 ${f.advice}</div>
+      <div class="tags">${f.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+    </div>
+  `).join('') || '<div style="padding:40px;text-align:center;color:#8b92a8;">无匹配条目</div>';
+}
+renderFeed('all', 'all');
+
+// ====== 筛选 ======
+document.getElementById('filters').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  const parent = chip.parentElement;
+  parent.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+
+  // 当前激活的两组筛选
+  const cat = document.querySelector('[data-cat].active')?.dataset.cat || 'all';
+  const src = document.querySelector('[data-src].active')?.dataset.src || 'all';
+  renderFeed(cat, src);
+});
+
+// ====== 雷达图：6 维度覆盖率 ======
+const radarChart = echarts.init(document.getElementById('radar-chart'));
+radarChart.setOption({
+  title: { text: '维度覆盖', textStyle: { color: '#8b92a8', fontSize: 12 }, left: 4, top: 0 },
+  tooltip: { trigger: 'item' },
+  radar: {
+    indicator: [
+      { name: '推荐系统', max: 100 },
+      { name: '库存算法', max: 100 },
+      { name: '私域/会员', max: 100 },
+      { name: 'POS/门店', max: 100 },
+      { name: '小程序', max: 100 },
+      { name: '大模型/AI', max: 100 }
+    ],
+    splitArea: { areaStyle: { color: ['rgba(0,212,255,0.02)', 'rgba(0,212,255,0.05)'] } },
+    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+    name: { textStyle: { color: '#8b92a8', fontSize: 11 } }
+  },
+  series: [{
+    type: 'radar', symbol: 'circle', symbolSize: 6,
+    lineStyle: { color: '#00d4ff', width: 2 },
+    areaStyle: { color: 'rgba(0,212,255,0.2)' },
+    itemStyle: { color: '#00d4ff' },
+    data: [{ value: [85, 72, 68, 90, 78, 95], name: '本周覆盖' }]
+  }]
+});
+
+// ====== 趋势图：7 天采集量 ======
+const trendChart = echarts.init(document.getElementById('trend-chart'));
+trendChart.setOption({
+  title: { text: '7 天采集量', textStyle: { color: '#8b92a8', fontSize: 12 }, left: 4, top: 0 },
+  tooltip: { trigger: 'axis' },
+  grid: { left: 30, right: 16, top: 32, bottom: 20 },
+  xAxis: {
+    type: 'category',
+    data: ['7/1', '7/2', '7/3', '7/4', '7/5', '7/6', '7/7'],
+    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+    axisLabel: { color: '#8b92a8', fontSize: 10 }
+  },
+  yAxis: {
+    type: 'value',
+    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+    axisLabel: { color: '#8b92a8', fontSize: 10 }
+  },
+  series: [{
+    name: '采集', type: 'line', smooth: true, symbol: 'circle', symbolSize: 6,
+    lineStyle: { color: '#00ff88', width: 2 },
+    itemStyle: { color: '#00ff88' },
+    areaStyle: { color: 'rgba(0,255,136,0.1)' },
+    data: [32, 28, 35, 30, 42, 38, 42]
+  }]
+});
+
+// ====== 倒计时：模拟每日 9:00 ======
+function tick() {
+  const now = new Date();
+  const next = new Date();
+  next.setHours(9, 0, 0, 0);
+  if (now > next) next.setDate(next.getDate() + 1);
+  const diff = next - now;
+  const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+  const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+  const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+  document.getElementById('countdown').textContent = `${h}:${m}:${s}`;
+}
+setInterval(tick, 1000); tick();
+
+window.addEventListener('resize', () => { radarChart.resize(); trendChart.resize(); });
+</script>
+
+</body>
+</html>

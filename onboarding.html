@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>项目知识资产 · Knowledge Base</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@11/marked.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+    color: #e6e9f0; min-height: 100vh; padding: 16px 24px 24px;
+  }
+  .header {
+    padding: 12px 20px; margin-bottom: 16px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header h1 .accent { color: #00d4ff; }
+  .header .sub { font-size: 12px; color: #8b92a8; margin-top: 4px; }
+  .meta-row { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; color: #8b92a8; flex-wrap: wrap; }
+  .meta-row .pill { padding: 3px 10px; background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 12px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; padding: 4px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; width: fit-content; }
+  .tab { padding: 8px 18px; font-size: 13px; cursor: pointer; border-radius: 6px; color: #8b92a8; transition: all 0.2s; }
+  .tab:hover { color: #c4c9d6; }
+  .tab.active { background: rgba(0,212,255,0.15); color: #00d4ff; }
+
+  .panel { padding: 20px 24px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; margin-bottom: 16px; }
+  .panel h2 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #00d4ff; }
+  .panel h3 { font-size: 13px; font-weight: 600; margin: 16px 0 6px; color: #ffaa3b; }
+  .panel .hint { font-size: 11px; color: #8b92a8; margin-bottom: 12px; }
+
+  #mermaid { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 16px; min-height: 320px; }
+  .mermaid { display: flex; justify-content: center; }
+
+  /* ADR 卡片 */
+  .adr { padding: 16px 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; margin-bottom: 12px; border-left: 3px solid #00d4ff; }
+  .adr h3 { color: #00d4ff; margin-top: 0; }
+  .adr .adr-meta { display: flex; gap: 12px; font-size: 11px; color: #8b92a8; margin-bottom: 12px; flex-wrap: wrap; }
+  .adr .adr-meta .pill { padding: 2px 8px; background: rgba(0,212,255,0.1); border-radius: 4px; color: #00d4ff; }
+  .adr .adr-section { margin: 10px 0; }
+  .adr .adr-section .label { font-size: 10px; text-transform: uppercase; color: #8b92a8; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .adr .adr-section .content { font-size: 13px; line-height: 1.7; color: #c4c9d6; }
+  .adr.proposed { border-left-color: #ffaa3b; }
+  .adr.accepted { border-left-color: #00ff88; }
+  .adr.superseded { border-left-color: #8b92a8; }
+
+  /* Onboarding 时间轴 */
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 4px; bottom: 4px; width: 2px; background: rgba(0,212,255,0.2); }
+  .tl-item { position: relative; padding-bottom: 18px; }
+  .tl-item::before { content: ''; position: absolute; left: -27px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: #00d4ff; box-shadow: 0 0 8px #00d4ff; }
+  .tl-item .time { font-size: 11px; color: #00d4ff; font-weight: 600; }
+  .tl-item .title { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .tl-item .desc { font-size: 12px; color: #c4c9d6; margin-top: 4px; line-height: 1.6; }
+  .tl-item .code { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px; margin-top: 6px; color: #00d4ff; }
+
+  /* 目录树 */
+  .tree { font-family: 'SF Mono', Menlo, monospace; font-size: 12px; line-height: 1.7; padding: 16px; background: rgba(0,0,0,0.2); border-radius: 8px; max-height: 360px; overflow-y: auto; }
+  .tree .dir { color: #00d4ff; }
+  .tree .file { color: #c4c9d6; }
+  .tree .comment { color: #8b92a8; }
+
+  /* Tab 隐藏 */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* 模块健康度表 */
+  .modules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .mod { padding: 12px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; }
+  .mod .name { font-size: 12px; font-weight: 600; color: #00d4ff; }
+  .mod .stat { font-size: 11px; color: #8b92a8; margin-top: 4px; }
+  .mod .bar { margin-top: 6px; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+  .mod .bar > div { height: 100%; background: #00ff88; }
+  .mod .bar.warn > div { background: #ffaa3b; }
+
+  .scroll { max-height: 540px; overflow-y: auto; }
+  .scroll::-webkit-scrollbar { width: 6px; }
+  .scroll::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>项目知识资产 <span class="accent">Knowledge Base</span></h1>
+  <div class="sub">由 WorkBuddy 自动扫描代码库生成 · 每周一同步至乐享知识库</div>
+  <div class="meta-row">
+    <span class="pill">项目: retail-platform</span>
+    <span class="pill">代码量: 24.6 万行</span>
+    <span class="pill">模块: 47 个</span>
+    <span class="pill">依赖: 312 个</span>
+    <span class="pill">覆盖率: 78.4%</span>
+    <span class="pill">扫描耗时: 4 分 23 秒</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="arch">① 架构图</div>
+  <div class="tab" data-tab="adr">② ADR 决策记录</div>
+  <div class="tab" data-tab="onboard">③ 新人 Onboarding</div>
+  <div class="tab" data-tab="tree">④ 目录结构</div>
+</div>
+
+<!-- 架构图 -->
+<div class="tab-content active" data-tab="arch">
+  <div class="panel">
+    <h2>系统架构</h2>
+    <div class="hint">WorkBuddy 扫描结果 · 4 层架构（接入层 / 业务层 / 能力层 / 数据层）</div>
+    <div id="mermaid" class="mermaid">
+graph TB
+  subgraph 接入层
+    A1[小程序]:::client
+    A2[POS 客户端]:::client
+    A3[Web 门店管理]:::client
+    A4[企微小程序]:::client
+  end
+
+  subgraph 网关层
+    G[Nginx + Kong<br/>限流/认证]:::gateway
+  end
+
+  subgraph 业务层
+    B1[订单中心<br/>order-service]:::biz
+    B2[商品中心<br/>product-service]:::biz
+    B3[库存中心<br/>inventory-service]:::biz
+    B4[会员中心<br/>member-service]:::biz
+    B5[营销中心<br/>marketing-service]:::biz
+  end
+
+  subgraph 能力层
+    C1[支付]:::cap
+    C2[推荐]:::cap
+    C3[风控]:::cap
+    C4[搜索 ES]:::cap
+    C5[推送]:::cap
+  end
+
+  subgraph 数据层
+    D1[MySQL 8.0]:::data
+    D2[Redis 8.0]:::data
+    D3[MongoDB]:::data
+    D4[ClickHouse]:::data
+    D5[Kafka]:::data
+  end
+
+  A1 & A2 & A3 & A4 --> G
+  G --> B1 & B2 & B3 & B4 & B5
+  B1 & B2 & B3 --> C1
+  B4 & B5 --> C2
+  B1 & B2 --> C3
+  B1 & B2 & B3 & B4 --> C4
+  B4 & B5 --> C5
+  B1 & B2 & B3 & B4 & B5 --> D1 & D2
+  B2 --> D3
+  B5 --> D4
+  B1 & B2 & B3 --> D5
+
+  classDef client fill:#1a3a5c,stroke:#4a8fc5,color:#fff
+  classDef gateway fill:#5c2a8c,stroke:#a855f7,color:#fff
+  classDef biz fill:#0d5c4a,stroke:#00ff88,color:#fff
+  classDef cap fill:#5c4a0d,stroke:#ffaa3b,color:#fff
+  classDef data fill:#5c1a1a,stroke:#ff5e5e,color:#fff
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>模块健康度（47 模块）</h2>
+    <div class="hint">综合：代码量 + 测试覆盖率 + 依赖新鲜度 + 最近改动活跃度</div>
+    <div class="modules">
+      <div class="mod"><div class="name">order-service</div><div class="stat">8.2 万行 · 覆盖率 91%</div><div class="bar"><div style="width:91%"></div></div></div>
+      <div class="mod"><div class="name">product-service</div><div class="stat">5.6 万行 · 覆盖率 87%</div><div class="bar"><div style="width:87%"></div></div></div>
+      <div class="mod"><div class="name">inventory-service</div><div class="stat">3.4 万行 · 覆盖率 82%</div><div class="bar"><div style="width:82%"></div></div></div>
+      <div class="mod"><div class="name">member-service</div><div class="stat">2.8 万行 · 覆盖率 85%</div><div class="bar"><div style="width:85%"></div></div></div>
+      <div class="mod"><div class="name">marketing-service</div><div class="stat">2.1 万行 · 覆盖率 76%</div><div class="bar warn"><div style="width:76%"></div></div></div>
+      <div class="mod"><div class="name">payment-gateway</div><div class="stat">1.9 万行 · 覆盖率 95%</div><div class="bar"><div style="width:95%"></div></div></div>
+      <div class="mod"><div class="name">recommend-engine</div><div class="stat">1.5 万行 · 覆盖率 64%</div><div class="bar warn"><div style="width:64%"></div></div></div>
+      <div class="mod"><div class="name">search-service</div><div class="stat">1.2 万行 · 覆盖率 79%</div><div class="bar"><div style="width:79%"></div></div></div>
+      <div class="mod"><div class="name">push-service</div><div class="stat">0.8 万行 · 覆盖率 88%</div><div class="bar"><div style="width:88%"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADR -->
+<div class="tab-content" data-tab="adr">
+  <div class="panel">
+    <h2>架构决策记录（ADR）</h2>
+    <div class="hint">3 个核心决策 · 由代码库扫描 + LLM 自动生成 → 人工 review</div>
+
+    <div class="scroll">
+
+    <div class="adr accepted">
+      <h3>ADR-001: 业务服务采用微服务架构</h3>
+      <div class="adr-meta">
+        <span class="pill">状态: Accepted</span>
+        <span class="pill">日期: 2024-08-12</span>
+        <span class="pill">决策人: 架构组</span>
+        <span class="pill">影响范围: 全业务</span>
+      </div>
+      <div class="adr-section">
+        <div class="label">背景 (Context)</div>
+        <div class="content">原单体应用（Java + Spring）代码量超 50 万行，单团队交付周期 3 周起，618 大促扩容成本高。需要支持多团队并行交付 + 弹性扩缩容。</div>
+      </div>
+      <div class="adr-section">
+        <div class="label">决策 (Decision)</div>
+        <div class="content">按业务域拆分为 5 个核心微服务（订单 / 商品 / 库存 / 会员 / 营销），使用 Spring Cloud + Nacos 注册中心，Kong 网关统一接入，Kafka 异步解耦。</div>
+      </div>
+      <div class="adr-section">
+        <div class="label">影响 (Consequences)</div>
+        <div class="content"><b style="color:#00ff88">✅ 正面</b>：交付周期从 3 周降至 1 周 · 大促弹性扩容 3 倍 · 故障隔离 90%<br><b style="color:#ff5e5e">⚠️ 负面</b>：分布式事务复杂度 ↑ · 链路追踪刚需 · 团队运维成本 ↑</div>
+      </div>
+    </div>
+
+    <div class="adr accepted">
+      <h3>ADR-002: 缓存层选型 Redis 8.0（向量化检索）</h3>
+      <div class="adr-meta">
+        <span class="pill">状态: Accepted</span>
+        <span class="pill">日期: 2026-03-05</span>
+        <span class="pill">决策人: 基础架构 + 推荐团队</span>
+        <span class="pill">影响范围: 商品/推荐</span>
+      </div>
+      <div class="adr-section">
+        <div class="label">背景 (Context)</div>
+        <div class="content">商品推荐场景需要向量检索，原方案 FAISS 独立部署，维护两套基础设施。商品 SKU 数 1000 万+，检索延迟 P95 要求 < 15ms。</div>
+      </div>
+      <div class="adr-section">
+        <div class="label">决策 (Decision)</div>
+        <div class="content">升级 Redis 到 8.0 版本，使用原生 RediSearch 向量检索能力，统一基础设施。保留 FAISS 作为离线训练引擎。</div>
+      </div>
+      <div class="adr-section">
+        <div class="label">影响 (Consequences)</div>
+        <div class="content"><b style="color:#00ff88">✅ 正面</b>：基础设施 1 套 · 维护成本 -50% · P95 12ms 达标<br><b style="color:#ff5e5e">⚠️ 负面</b>：Redis 内存压力 ↑ 30% · 需评估大 Key 风险</div>
+      </div>
+    </div>
+
+    <div class="adr proposed">
+      <h3>ADR-003: 搜索服务从 ES 7.x 升级到 ES 9.x</h3>
+      <div class="adr-meta">
+        <span class="pill">状态: Proposed</span>
+        <span class="pill">日期: 2026-06-28</span>
+        <span class="pill">决策人: 搜索团队</span>
+        <span class="pill">影响范围: 商品/搜索</span>
+      </div>
+      <div class="adr-section">
+        <div class="label">背景 (Context)</div>
+        <div class="content">ES 7.x 已 EOL（2026-07），新版本向量检索性能提升 40%，需考虑升级窗口。</div>
+      </div>
+      <div class="adr-section">
+        <div class="label">决策 (Decision)</div>
+        <div class="content">采用蓝绿发布升级 ES 9.x，灰度 5% → 50% → 100%，预计 2 周完成全量切换。</div>
+      </div>
+      <div class="adr-section">
+        <div class="label">影响 (Consequences)</div>
+        <div class="content"><b style="color:#00ff88">✅ 预期</b>：检索性能 +40% · 享受官方支持 · 新特性解锁<br><b style="color:#ffaa3b">⚠️ 风险</b>：查询语法部分 deprecated · 需全链路回归</div>
+      </div>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding -->
+<div class="tab-content" data-tab="onboard">
+  <div class="panel">
+    <h2>新人 Onboarding 指南</h2>
+    <div class="hint">由代码库扫描自动生成 · 目标：10 分钟跑通 + 30 分钟理解 + 1 周上手</div>
+
+    <h3>📋 第 0 步：环境准备（5 分钟）</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="time">第 0 分钟</div>
+        <div class="title">安装基础工具</div>
+        <div class="desc">JDK 17 · Maven 3.9 · Docker · Node.js 20 · Git · IDE（IntelliJ IDEA / VSCode）</div>
+        <div class="code">brew install openjdk@17 maven docker node@20 git</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">第 3 分钟</div>
+        <div class="title">克隆代码 + 配置本地 hosts</div>
+        <div class="desc">拉取代码并配置本地服务发现（10 个微服务本地调试）</div>
+        <div class="code">git clone git@github.com:retail/platform.git && cd platform<br>echo "127.0.0.1 order.local product.local inventory.local" | sudo tee -a /etc/hosts</div>
+      </div>
+    </div>
+
+    <h3>🚀 第 1 步：10 分钟跑通（启动核心服务）</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="time">第 6 分钟</div>
+        <div class="title">启动基础设施（MySQL / Redis / Kafka）</div>
+        <div class="code">docker compose -f docker/local-stack.yml up -d</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">第 8 分钟</div>
+        <div class="title">启动 order-service（订单服务）</div>
+        <div class="desc">这是最简单的服务，作为入门 → 调试入口</div>
+        <div class="code">cd order-service && mvn spring-boot:run -Dspring-boot.run.profiles=local</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">第 10 分钟</div>
+        <div class="title">验证：调用 hello 接口</div>
+        <div class="code">curl http://localhost:8080/api/order/hello<br># → {"code":0,"msg":"hello from order-service","version":"v1.2.3"}</div>
+      </div>
+    </div>
+
+    <h3>🧠 第 2 步：30 分钟理解（核心流程）</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="time">第 12 分钟</div>
+        <div class="title">读架构图 + 5 维模块划分</div>
+        <div class="desc">看顶部「系统架构」图，搞清 5 个核心服务的职责边界</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">第 18 分钟</div>
+        <div class="title">读 ADR-001（微服务拆分决策）</div>
+        <div class="desc">理解为什么拆，权衡什么（避免重蹈覆辙）</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">第 25 分钟</div>
+        <div class="title">看一个 PR 走通完整流程</div>
+        <div class="desc">从「创建订单」接口看：Controller → Service → Repository → DB → 异步发 MQ</div>
+        <div class="code">git log --oneline --grep "feat: 订单创建" -n 5</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">第 30 分钟</div>
+        <div class="title">跑通 1 个完整 E2E 测试</div>
+        <div class="code">mvn test -Dtest=OrderE2ETest#testCreateOrderWithPayment</div>
+      </div>
+    </div>
+
+    <h3>🛠️ 第 3 步：1 周上手（接活）</h3>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="time">Day 1-2</div>
+        <div class="title">领 Onboarding Issue（带 mentor）</div>
+        <div class="desc">从 TAPD 领取 label=good-first-issue 的任务，每任务都有导师 1v1 review</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">Day 3-4</div>
+        <div class="title">提交第 1 个 PR</div>
+        <div class="desc">小到改一个文案，目标是走通完整 Git Flow（branch → commit → MR → review → merge）</div>
+      </div>
+      <div class="tl-item">
+        <div class="time">Day 5</div>
+        <div class="title">参加周会 + 团队 review</div>
+        <div class="desc">听大家讨论设计决策，遇到听不懂的术语记下来，会后问 mentor</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 目录结构 -->
+<div class="tab-content" data-tab="tree">
+  <div class="panel">
+    <h2>项目目录结构（自动扫描生成）</h2>
+    <div class="hint">47 模块 · 312 依赖 · 关键路径加粗</div>
+    <div class="tree">
+<span class="dir">retail-platform/</span>
+├── <span class="dir">order-service/</span>              <span class="comment"># 订单中心 8.2 万行</span>
+│   ├── <span class="dir">src/main/java/com/retail/order/</span>
+│   │   ├── <span class="file">controller/</span>
+│   │   ├── <span class="file">service/</span>
+│   │   ├── <span class="file">repository/</span>
+│   │   ├── <span class="file">domain/</span>
+│   │   └── <span class="file">mq/</span>
+│   ├── <span class="file">src/test/</span>
+│   ├── <span class="file">pom.xml</span>
+│   └── <span class="file">Dockerfile</span>
+├── <span class="dir">product-service/</span>            <span class="comment"># 商品中心 5.6 万行</span>
+├── <span class="dir">inventory-service/</span>          <span class="comment"># 库存中心 3.4 万行</span>
+├── <span class="dir">member-service/</span>             <span class="comment"># 会员中心 2.8 万行</span>
+├── <span class="dir">marketing-service/</span>          <span class="comment"># 营销中心 2.1 万行</span>
+├── <span class="dir">common/</span>                      <span class="comment"># 公共组件（DTO/Util/Exception）</span>
+│   ├── <span class="dir">common-core/</span>
+│   ├── <span class="dir">common-redis/</span>
+│   ├── <span class="dir">common-kafka/</span>
+│   └── <span class="dir">common-trace/</span>
+├── <span class="dir">gateway/</span>                     <span class="comment"># Kong 配置 + 限流规则</span>
+├── <span class="dir">deploy/</span>                      <span class="comment"># K8s 部署清单</span>
+│   ├── <span class="dir">base/</span>
+│   ├── <span class="dir">overlay-prod/</span>
+│   └── <span class="dir">overlay-staging/</span>
+├── <span class="dir">docs/</span>                        <span class="comment"># 项目文档（自动同步乐享）</span>
+│   ├── <span class="file">architecture.md</span>
+│   ├── <span class="file">adr/</span>
+│   └── <span class="file">onboarding/</span>
+├── <span class="dir">tools/</span>                      <span class="comment"># 开发工具脚本</span>
+├── <span class="file">docker-compose.yml</span>          <span class="comment"># 本地依赖编排</span>
+├── <span class="file">README.md</span>
+└── <span class="file">pom.xml</span>                     <span class="comment"># 父 POM（依赖管理）</span>
+    </div>
+
+    <h3 style="margin-top:18px;">同步策略</h3>
+    <div style="font-size:12px;color:#c4c9d6;line-height:1.8;">
+      · <b style="color:#00d4ff">架构图</b>：每周一 09:00 扫描 + diff → 乐享「retail-platform/架构」目录<br>
+      · <b style="color:#00d4ff">ADR</b>：检测到 <code style="background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:3px;">docs/adr/*.md</code> 变更 → 自动同步 → @ 架构师 review<br>
+      · <b style="color:#00d4ff">Onboarding</b>：随版本 v1.x 发布自动更新到乐享「新人入职」专栏
+    </div>
+  </div>
+</div>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose', themeVariables: { background: 'transparent' } });
+
+// Tab 切换
+document.querySelector('.tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if (!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.querySelector(`.tab-content[data-tab="${t.dataset.tab}"]`).classList.add('active');
+});
+</script>
+
+</body>
+</html>
